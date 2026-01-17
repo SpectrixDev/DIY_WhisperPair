@@ -135,15 +135,13 @@ def main():
     parser = argparse.ArgumentParser(description="DIY-WhisperPair Verification Demo - CVE-2025-36911")
     parser.add_argument("--target", "-t", help="Target BLE address (auto-scan if not specified)")
     parser.add_argument("--loud", "-l", action="store_true", help="Ignored in sanitized version (kept for compatibility)")
-    parser.add_argument("--i-accept-responsibility", action="store_true", help="Acknowledge legal responsibility")
-    parser.add_argument("--i-own-this-device", action="store_true", help="Confirm device ownership/authorization")
-    parser.add_argument("--i-understand-scope", action="store_true", help="Confirm testing only authorized devices")
+    parser.add_argument("--authorized", action="store_true", help="Confirm you own the device and accept responsibility")
     parser.add_argument("--no-confirm", action="store_true", help="Skip interactive confirmation")
     args = parser.parse_args()
 
-    if not (args.i_accept_responsibility and args.i_own_this_device and args.i_understand_scope):
-        print("\n[-] Refusing to run without explicit consent flags.")
-        print("    Use --i-accept-responsibility --i-own-this-device --i-understand-scope")
+    if not args.authorized:
+        print("\n[-] Refusing to run without explicit consent flag.")
+        print("    Use --authorized to confirm you own the device and accept responsibility")
         sys.exit(2)
 
     if not _confirm_authorized_use(args.no_confirm):

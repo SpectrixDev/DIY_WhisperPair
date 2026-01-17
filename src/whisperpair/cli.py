@@ -146,18 +146,16 @@ def scan(timeout: float, scan_all: bool, vulnerable: bool):
 @click.option("--key", "-k", help="AES key (hex) or Account Key file")
 @click.option("--timeout", "-t", default=10.0, help="Connection timeout")
 @click.option("--seeker-address", "-s", help="Seeker's Bluetooth address (optional)")
-@click.option("--i-accept-responsibility", is_flag=True, help="Acknowledge legal responsibility")
-@click.option("--i-own-this-device", is_flag=True, help="Confirm device ownership/authorization")
-@click.option("--i-understand-scope", is_flag=True, help="Confirm testing only authorized devices")
+@click.option("--authorized", is_flag=True, help="Confirm you own the device and accept responsibility")
 @click.option("--no-confirm", is_flag=True, help="Skip interactive confirmation")
-def verify(address: str, key: Optional[str], timeout: float, seeker_address: Optional[str], i_accept_responsibility: bool, i_own_this_device: bool, i_understand_scope: bool, no_confirm: bool):
+def verify(address: str, key: Optional[str], timeout: float, seeker_address: Optional[str], authorized: bool, no_confirm: bool):
     print_banner()
 
     console.print(f"[bold]Target:[/bold] {address}")
 
-    if not (i_accept_responsibility and i_own_this_device and i_understand_scope):
-        console.print("[red]Refusing to run without explicit consent flags.[/red]")
-        console.print("Use --i-accept-responsibility --i-own-this-device --i-understand-scope")
+    if not authorized:
+        console.print("[red]Refusing to run without explicit consent flag.[/red]")
+        console.print("Use --authorized to confirm you own the device and accept responsibility.")
         sys.exit(2)
 
     if not no_confirm:

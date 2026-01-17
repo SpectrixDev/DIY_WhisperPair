@@ -33,6 +33,17 @@ This implementation is based on the publicly disclosed research by **KU Leuven (
 - **Disclosure**: Responsibly disclosed to Google in August 2025 (150-day window) (not by me)
 - **Google Severity**: Critical (maximum bounty awarded: $15,000)
 
+### Watch the Presentation
+
+[![One Tap to Hijack Them All](https://img.youtube.com/vi/-j45ShJINtc/0.jpg)](https://www.youtube.com/watch?v=-j45ShJINtc)
+
+**One Tap to Hijack Them All - A Security Analysis of the Google Fast Pair Protocol**
+*By COSIC, KU Leuven (Jan 15, 2026)*
+
+> Authors: Sayon Duttagupta, Nikola Antonijević, Bart Preneel (COSIC, KU Leuven), Seppe Wyns, Dave Singelée (DistriNet Group T, KU Leuven)
+
+This video demonstrates the vulnerability in action and explains the technical details behind the research.
+
 The vulnerability was **patched** by manufacturers following coordinated disclosure. This PoC is released **after** the disclosure window closed and patches were made available.
 
 ---
@@ -125,9 +136,7 @@ All verification functionality requires explicit consent flags:
 
 | Flag | Purpose |
 |------|---------|
-| `--i-accept-responsibility` | Acknowledge legal responsibility |
-| `--i-own-this-device` | Confirm device ownership |
-| `--i-understand-scope` | Confirm testing only authorized devices |
+| `--authorized` | Confirm you own the device and accept responsibility |
 | Interactive confirmation | Additional prompt before test execution |
 
 ### Scanning (Safe - Passive)
@@ -148,19 +157,15 @@ whisperpair info AA:BB:CC:DD:EE:FF
 ```bash
 # Verify Fast Pair behavior (requires consent flags)
 whisperpair verify AA:BB:CC:DD:EE:FF \
-    --i-accept-responsibility \
-    --i-own-this-device \
-    --i-understand-scope
+    --authorized
 
 # Verify Vulnerability (Safe POC)
 python security_demo.py \
-    --i-accept-responsibility \
-    --i-own-this-device \
-    --i-understand-scope \
+    --authorized \
     --target AA:BB:CC:DD:EE:FF
 
 # Skip prompts for automated testing of YOUR OWN devices
-python security_demo.py --i-accept-responsibility --i-own-this-device --i-understand-scope --no-confirm
+python security_demo.py --authorized --no-confirm
 ```
 
 ### Demo Mode (Educational - Safe)

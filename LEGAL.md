@@ -109,8 +109,7 @@ This tool enables:
 ### When Using This Tool
 
 1. **Use the safety flags**
-   - `--i-accept-responsibility`: Acknowledges legal responsibility
-   - `--i-own-this-device`: Confirms device ownership
+   - `--authorized`: Confirm you own the device and accept responsibility
 
 2. **Limit scope**
    - Only target devices covered by your authorization
