@@ -1,5 +1,6 @@
 """
-WhisperPair CLI - Command-line interface for Fast Pair security research
+WhisperPair CLI - Interactive security research tool for Fast Pair vulnerability testing
+CVE-2025-36911 - For authorized testing only
 """
 
 from __future__ import annotations
@@ -14,7 +15,11 @@ from rich.console import Console
 from rich.table import Table
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.panel import Panel
-from rich import print as rprint
+from rich.prompt import Prompt, Confirm, IntPrompt
+from rich.text import Text
+from rich.rule import Rule
+from rich.columns import Columns
+from rich import box
 
 console = Console()
 
@@ -24,18 +29,43 @@ BANNER = """
 [bold red]║║║╠═╣║╚═╗╠═╝║╣ ╠╦╝╠═╝╠═╣║╠╦╝[/bold red]
 [bold red]╚╩╝╩ ╩╩╚═╝╩  ╚═╝╩╚═╩  ╩ ╩╩╩╚═[/bold red]
 
-[dim]Google Fast Pair Security Research Tool[/dim]
-[dim]CVE-2025-36911 - For authorized testing only[/dim]
+[bold cyan]Google Fast Pair Security Research Tool[/bold cyan]
+[dim]CVE-2025-36911 Reference Implementation, by SpectrixDev[/dim]
+"""
+
+LEGAL_WARNING = """
+[bold yellow]⚠  LEGAL WARNING[/bold yellow]
+
+This tool performs [bold]active Bluetooth operations[/bold].
+Unauthorized access to computer systems is a [bold red]criminal offence[/bold red].
+
+[bold]You MUST have:[/bold]
+  • Written permission from the device owner, OR
+  • Own the device yourself
+
+[dim]UK: Computer Misuse Act 1990 | US: CFAA | EU: Directive 2013/40/EU[/dim]
 """
 
 
 def print_banner():
-    console.print(Panel(BANNER, border_style="red"))
+    """Display the application banner."""
+    console.print(Panel(BANNER, border_style="red", padding=(0, 2)))
+
+
+def print_legal_warning():
+    """Display legal warning panel."""
+    console.print(Panel(LEGAL_WARNING, border_style="yellow", padding=(0, 2)))
+
+
+def clear_screen():
+    """Clear terminal screen."""
+    console.clear()
 
 
 def _handle_bluetooth_error(e: Exception) -> None:
+    """Handle Bluetooth-related errors with helpful messages."""
     error_str = str(e).lower()
-    
+
     if "no bluetooth" in error_str or "not available" in error_str:
         console.print("\n[bold red]ERROR: No Bluetooth adapter found![/bold red]")
         console.print("\n[yellow]Possible causes:[/yellow]")
@@ -56,209 +86,320 @@ def _handle_bluetooth_error(e: Exception) -> None:
         console.print(f"\n[red]Bluetooth error: {e}[/red]")
 
 
-@click.group()
-@click.version_option(version="0.1.0")
-def main():
-    """WhisperPair - Fast Pair Security Research Tool"""
-    pass
+def show_main_menu() -> str:
+    """Display the main menu and return user choice."""
+    console.print()
+    console.print(Rule("[bold cyan]Main Menu[/bold cyan]", style="cyan"))
+    console.print()
+
+    menu_items = [
+        ("1", "Scan", "Discover Fast Pair devices nearby", "green"),
+        ("2", "Verify", "Test device vulnerability (requires authorization)", "yellow"),
+        ("3", "Info", "Get detailed device information", "cyan"),
+        ("4", "About", "Learn about CVE-2025-36911 & how verification works", "magenta"),
+        ("0", "Exit", "Quit the application", "dim"),
+    ]
+
+    for key, name, desc, color in menu_items:
+        if key == "0":
+            console.print()
+        console.print(f"  [{color}][bold]{key}[/bold][/{color}]  [{color}]{name}[/{color}]  [dim]{desc}[/dim]")
+
+    console.print()
+    choice = Prompt.ask(
+        "[bold]Select option[/bold]",
+        choices=["0", "1", "2", "3", "4"],
+        default="1"
+    )
+    return choice
 
 
-@main.command()
-@click.option("--timeout", "-t", default=10.0, help="Scan timeout in seconds")
-@click.option("--all", "-a", "scan_all", is_flag=True, help="Scan all BLE devices")
-@click.option("--vulnerable", "-v", is_flag=True, help="Only show potentially vulnerable devices")
-def scan(timeout: float, scan_all: bool, vulnerable: bool):
-    """Scan for Fast Pair devices"""
-    print_banner()
+def show_scan_menu() -> dict:
+    """Show scan options and return configuration."""
+    console.print()
+    console.print(Rule("[bold green]Scan Configuration[/bold green]", style="green"))
+    console.print()
 
-    async def do_scan():
-        from bleak.exc import BleakError
-        from .scanner import FastPairScanner, find_vulnerable_devices
+    console.print("[dim]Scan modes:[/dim]")
+    console.print("  [bold]1[/bold]  Fast Pair devices only [dim](recommended)[/dim]")
+    console.print("  [bold]2[/bold]  Potentially vulnerable devices [dim](not in pairing mode)[/dim]")
+    console.print("  [bold]3[/bold]  All BLE devices")
+    console.print("  [bold]0[/bold]  Back to main menu")
+    console.print()
 
-        devices = []
+    mode = Prompt.ask("[bold]Select scan mode[/bold]", choices=["0", "1", "2", "3"], default="1")
 
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console,
-        ) as progress:
-            task = progress.add_task(
-                f"[cyan]Scanning for Fast Pair devices ({timeout}s)...",
-                total=None,
-            )
+    if mode == "0":
+        return {"cancel": True}
 
-            try:
-                if vulnerable:
-                    devices = await find_vulnerable_devices(timeout=timeout, verbose=False)
+    timeout = IntPrompt.ask("[bold]Scan timeout (seconds)[/bold]", default=10)
+
+    return {
+        "cancel": False,
+        "mode": mode,
+        "timeout": float(timeout),
+        "vulnerable_only": mode == "2",
+        "scan_all": mode == "3",
+    }
+
+
+async def run_scan(config: dict):
+    """Execute the scan with given configuration."""
+    from bleak.exc import BleakError
+    from .scanner import FastPairScanner, find_vulnerable_devices
+
+    devices = []
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
+    ) as progress:
+        task = progress.add_task(
+            f"[cyan]Scanning for devices ({config['timeout']}s)...",
+            total=None,
+        )
+
+        try:
+            if config["vulnerable_only"]:
+                devices = await find_vulnerable_devices(timeout=config["timeout"], verbose=False)
+            else:
+                scanner = FastPairScanner(timeout=config["timeout"])
+                if config["scan_all"]:
+                    devices = await scanner.scan_all_ble()
                 else:
-                    scanner = FastPairScanner(timeout=timeout)
-                    if scan_all:
-                        devices = await scanner.scan_all_ble()
-                    else:
-                        devices = await scanner.scan()
-            except BleakError as e:
-                progress.stop()
-                _handle_bluetooth_error(e)
-                return
-
-        if not devices:
-            console.print("[yellow]No Fast Pair devices found.[/yellow]")
+                    devices = await scanner.scan()
+        except BleakError as e:
+            progress.stop()
+            _handle_bluetooth_error(e)
             return
 
-        table = Table(title="Fast Pair Devices Found")
-        table.add_column("Address", style="cyan", no_wrap=True)
-        table.add_column("Name", style="green")
-        table.add_column("Model ID", style="magenta")
-        table.add_column("RSSI", justify="right")
-        table.add_column("Mode", style="yellow")
-        table.add_column("Vulnerable?", style="red")
+    if not devices:
+        console.print("[yellow]No Fast Pair devices found.[/yellow]")
+        return
 
-        for device in devices:
-            model_id = f"0x{device.model_id:06X}" if device.model_id else "N/A"
-            mode = "[green]PAIRING[/green]" if device.is_in_pairing_mode else "[dim]Idle[/dim]"
-            vuln = "[red]LIKELY[/red]" if not device.is_in_pairing_mode else "[dim]N/A[/dim]"
+    table = Table(title="Discovered Devices", box=box.ROUNDED)
+    table.add_column("#", style="dim", width=3)
+    table.add_column("Address", style="cyan", no_wrap=True)
+    table.add_column("Name", style="green")
+    table.add_column("Model ID", style="magenta")
+    table.add_column("RSSI", justify="right")
+    table.add_column("Mode", style="yellow")
+    table.add_column("Risk", style="red")
 
-            table.add_row(
-                device.address,
-                device.name or device.model_name,
-                model_id,
-                f"{device.rssi} dBm",
-                mode,
-                vuln,
-            )
+    for idx, device in enumerate(devices, 1):
+        model_id = f"0x{device.model_id:06X}" if device.model_id else "N/A"
+        mode = "[green]PAIRING[/green]" if device.is_in_pairing_mode else "[dim]Idle[/dim]"
+        risk = "[red]HIGH[/red]" if not device.is_in_pairing_mode else "[dim]Low[/dim]"
 
-        console.print(table)
-        console.print(f"\n[bold]Found {len(devices)} device(s)[/bold]")
+        # Use Text() to prevent Rich from interpreting MAC address colons as emoji codes (e.g. :AB: -> 🆎)
+        addr_text = Text(device.address)
+        
+        table.add_row(
+            str(idx),
+            addr_text,
+            device.name or device.model_name,
+            model_id,
+            f"{device.rssi} dBm",
+            mode,
+            risk,
+        )
 
-        if not vulnerable:
-            idle_count = sum(1 for d in devices if not d.is_in_pairing_mode)
-            if idle_count:
-                console.print(
-                    f"[yellow]⚠ {idle_count} device(s) advertising while NOT in pairing mode "
-                    f"(potential WhisperPair targets)[/yellow]"
-                )
+    console.print()
+    console.print(table)
+    console.print(f"\n[bold]Found {len(devices)} device(s)[/bold]")
 
-    asyncio.run(do_scan())
+    idle_count = sum(1 for d in devices if not d.is_in_pairing_mode)
+    if idle_count:
+        console.print(
+            f"[yellow]⚠ {idle_count} device(s) advertising while NOT in pairing mode[/yellow]"
+        )
+        console.print("[dim]These may be vulnerable to CVE-2025-36911[/dim]")
+
+    # Clipboard copy option
+    console.print()
+    copy_choice = Prompt.ask(
+        "[bold]Enter device # to copy address (or 0 to continue)[/bold]", 
+        choices=[str(i) for i in range(len(devices) + 1)],
+        default="0",
+        show_choices=False
+    )
+    
+    if copy_choice != "0":
+        selected_device = devices[int(copy_choice) - 1]
+        try:
+            import pyperclip
+            pyperclip.copy(selected_device.address)
+            console.print(f"[green]Copied {selected_device.address} to clipboard![/green]")
+        except ImportError:
+            console.print("[red]pyperclip not installed. Install it to use clipboard features.[/red]")
+        except Exception as e:
+            console.print(f"[red]Clipboard copy failed: {e}[/red]")
+            console.print("[dim]On Linux, you may need 'xclip' or 'xsel' installed.[/dim]")
 
 
-@main.command(name="verify")
-@click.argument("address")
-@click.option("--key", "-k", help="AES key (hex) or Account Key file")
-@click.option("--timeout", "-t", default=10.0, help="Connection timeout")
-@click.option("--seeker-address", "-s", help="Seeker's Bluetooth address (optional)")
-@click.option("--authorized", is_flag=True, help="Confirm you own the device and accept responsibility")
-@click.option("--no-confirm", is_flag=True, help="Skip interactive confirmation")
-def verify(address: str, key: Optional[str], timeout: float, seeker_address: Optional[str], authorized: bool, no_confirm: bool):
-    print_banner()
+def show_verify_menu() -> dict:
+    """Show verification options and handle authorization."""
+    console.print()
+    console.print(Rule("[bold yellow]Vulnerability Verification[/bold yellow]", style="yellow"))
+    console.print()
 
-    console.print(f"[bold]Target:[/bold] {address}")
+    print_legal_warning()
+
+    console.print()
+    authorized = Confirm.ask(
+        "[bold]Do you confirm you own or have written authorization to test the target device?[/bold]",
+        default=False
+    )
 
     if not authorized:
-        console.print("[red]Refusing to run without explicit consent flag.[/red]")
-        console.print("Use --authorized to confirm you own the device and accept responsibility.")
-        sys.exit(2)
+        console.print("[red]Authorization required. Returning to main menu.[/red]")
+        return {"cancel": True}
 
-    if not no_confirm:
-        response = console.input("Type 'I AM AUTHORIZED' to continue: ")
-        if response.strip() != "I AM AUTHORIZED":
-            console.print("[red]Authorization confirmation failed.[/red]")
-            sys.exit(2)
+    console.print()
+    address = Prompt.ask("[bold]Enter target device address[/bold] [dim](e.g., AA:BB:CC:DD:EE:FF)[/dim]")
 
-    if not key:
-        console.print(
-            "[yellow]⚠ No AES key provided. Using test key (will likely fail).[/yellow]"
-        )
-        console.print(
-            "[dim]To get real keys, you need the device's Anti-Spoofing public key "
-            "(from Google's database) or an existing Account Key.[/dim]"
-        )
-        aes_key = bytes(16)
-    else:
+    if not address or len(address) < 17:
+        console.print("[red]Invalid address format.[/red]")
+        return {"cancel": True}
+
+    console.print()
+    console.print("[yellow]Final confirmation required.[/yellow]")
+    confirm_text = Prompt.ask("Type [bold]'I AM AUTHORIZED'[/bold] to proceed")
+
+    if confirm_text.strip() != "I AM AUTHORIZED":
+        console.print("[red]Authorization confirmation failed.[/red]")
+        return {"cancel": True}
+
+    use_key = Confirm.ask("[bold]Do you have an AES key?[/bold]", default=False)
+    aes_key = None
+    if use_key:
+        key_input = Prompt.ask("[bold]Enter AES key (hex)[/bold]")
         try:
-            aes_key = bytes.fromhex(key.replace(":", "").replace(" ", ""))
+            aes_key = bytes.fromhex(key_input.replace(":", "").replace(" ", ""))
             if len(aes_key) != 16:
-                raise ValueError("Key must be 16 bytes")
-        except ValueError as e:
-            console.print(f"[red]Invalid key: {e}[/red]")
-            sys.exit(1)
+                console.print("[red]Key must be 16 bytes. Using test key.[/red]")
+                aes_key = None
+        except ValueError:
+            console.print("[red]Invalid hex. Using test key.[/red]")
+            aes_key = None
 
-    async def do_verify():
-        from .client import FastPairClient, VerificationResult
-        from .protocol import parse_bluetooth_address
-
-        seeker_addr_bytes = None
-        if seeker_address:
-            try:
-                seeker_addr_bytes = parse_bluetooth_address(seeker_address)
-            except ValueError as e:
-                console.print(f"[red]Invalid seeker address: {e}[/red]")
-                return
-
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console,
-        ) as progress:
-            task = progress.add_task("[cyan]Connecting to target...", total=None)
-
-            try:
-                client = FastPairClient(address, connection_timeout=timeout)
-                await client.connect()
-                progress.update(task, description="[cyan]Connected. Sending verification request...")
-
-                result = await client.verify_pairing_behavior(
-                    aes_key=aes_key,
-                    seeker_address=seeker_addr_bytes,
-                )
-
-                await client.disconnect()
-
-            except Exception as e:
-                console.print(f"[red]Connection failed: {e}[/red]")
-                return
-
-        if result.success:
-            console.print("\n[bold green]✓ VERIFICATION COMPLETE[/bold green]")
-            console.print(f"[green]Provider BR/EDR Address: {result.provider_address}[/green]")
-            console.print(
-                "\n[yellow]Device appears VULNERABLE to CVE-2025-36911[/yellow]"
-            )
-            console.print(
-                "[dim]Next step: Initiate Bluetooth Classic pairing with the Provider address[/dim]"
-            )
-        else:
-            console.print(f"\n[red]✗ Verification failed: {result.error}[/red]")
-            console.print(
-                "[dim]This could mean: device is patched, wrong key, or not a Fast Pair device[/dim]"
-            )
-
-    asyncio.run(do_verify())
+    return {
+        "cancel": False,
+        "address": address.upper(),
+        "aes_key": aes_key,
+    }
 
 
-@main.command()
-@click.argument("address")
-@click.option("--timeout", "-t", default=10.0, help="Connection timeout")
-def info(address: str, timeout: float):
-    """Get detailed information about a Fast Pair device"""
-    print_banner()
+async def run_verify(config: dict):
+    """Execute vulnerability verification."""
+    from .client import FastPairClient
+    from .protocol import parse_bluetooth_address
 
-    async def do_info():
-        from .client import FastPairClient
-        from .constants import (
-            MODEL_ID_CHAR_UUID,
-            KEY_BASED_PAIRING_CHAR_UUID,
-            ACCOUNT_KEY_CHAR_UUID,
-            PASSKEY_CHAR_UUID,
-            KNOWN_MODEL_IDS,
-        )
+    address = config["address"]
+    aes_key = config["aes_key"]
 
-        console.print(f"[bold]Connecting to {address}...[/bold]")
+    if not aes_key:
+        console.print("[cyan]No AES key provided - using response-detection mode.[/cyan]")
+        console.print("[dim]The CVE doesn't require the key: any response = vulnerable.[/dim]")
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
+    ) as progress:
+        task = progress.add_task("[cyan]Connecting to target...", total=None)
 
         try:
-            client = FastPairClient(address, connection_timeout=timeout)
+            client = FastPairClient(address, connection_timeout=10.0)
+            await client.connect()
+            progress.update(task, description="[cyan]Connected. Sending verification request...")
+
+            result = await client.verify_pairing_behavior(aes_key=aes_key)
+            await client.disconnect()
+
+        except Exception as e:
+            console.print(f"[red]Connection failed: {e}[/red]")
+            return
+
+    console.print()
+    if result.success:
+        provider_info = f"[bold]Provider Address:[/bold] {result.provider_address}" if result.provider_address else "[dim]Provider address: (could not decrypt - key not provided)[/dim]"
+        console.print(Panel(
+            f"""
+[bold red]⚠  VULNERABLE[/bold red]
+
+Device responded to Key-based Pairing Request while NOT in pairing mode.
+
+[bold]Target:[/bold] {address}
+{provider_info}
+[bold]Raw Response:[/bold] {result.raw_response.hex() if result.raw_response else 'N/A'}
+
+[yellow]This device is vulnerable to CVE-2025-36911.[/yellow]
+[dim]An attacker could complete standard Bluetooth pairing to hijack this device.[/dim]
+""",
+            title="[bold red]Verification Result[/bold red]",
+            border_style="red",
+        ))
+    else:
+        console.print(Panel(
+            f"""
+[bold green]✓  NOT VULNERABLE[/bold green]
+
+Device did not respond to Key-based Pairing Request.
+
+[bold]Target:[/bold] {address}
+[bold]Details:[/bold] {result.error}
+
+[dim]The device correctly ignored the pairing request (patched or not reachable).[/dim]
+""",
+            title="[bold green]Verification Result[/bold green]",
+            border_style="green",
+        ))
+
+
+def show_info_menu() -> dict:
+    """Show device info options."""
+    console.print()
+    console.print(Rule("[bold cyan]Device Information[/bold cyan]", style="cyan"))
+    console.print()
+
+    address = Prompt.ask(
+        "[bold]Enter device address[/bold] [dim](e.g., AA:BB:CC:DD:EE:FF)[/dim]"
+    )
+
+    if not address or len(address) < 17:
+        console.print("[red]Invalid address format.[/red]")
+        return {"cancel": True}
+
+    return {"cancel": False, "address": address.upper()}
+
+
+async def run_info(config: dict):
+    """Get device information."""
+    from .client import FastPairClient
+    from .constants import (
+        MODEL_ID_CHAR_UUID,
+        KEY_BASED_PAIRING_CHAR_UUID,
+        ACCOUNT_KEY_CHAR_UUID,
+        PASSKEY_CHAR_UUID,
+        KNOWN_MODEL_IDS,
+    )
+
+    address = config["address"]
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
+    ) as progress:
+        task = progress.add_task(f"[cyan]Connecting to {address}...", total=None)
+
+        try:
+            client = FastPairClient(address, connection_timeout=10.0)
             await client.connect()
 
-            table = Table(title=f"Device Information: {address}")
+            table = Table(title=f"Device: {address}", box=box.ROUNDED)
             table.add_column("Property", style="cyan")
             table.add_column("Value", style="green")
 
@@ -270,10 +411,10 @@ def info(address: str, timeout: float):
             else:
                 table.add_row("Model ID", "[dim]Could not read[/dim]")
 
-            char_table = Table(title="Fast Pair Characteristics")
+            char_table = Table(title="Fast Pair Characteristics", box=box.SIMPLE)
             char_table.add_column("Characteristic", style="cyan")
             char_table.add_column("UUID", style="dim")
-            char_table.add_column("Present", style="yellow")
+            char_table.add_column("Present", justify="center")
 
             chars_to_check = [
                 ("Model ID", MODEL_ID_CHAR_UUID),
@@ -286,14 +427,13 @@ def info(address: str, timeout: float):
                 try:
                     char = client._client.services.get_characteristic(uuid)
                     present = "[green]✓[/green]" if char else "[red]✗[/red]"
-                    props = ", ".join(char.properties) if char else ""
                 except Exception:
                     present = "[yellow]?[/yellow]"
-                    props = ""
                 char_table.add_row(name, uuid[:20] + "...", present)
 
             await client.disconnect()
 
+            console.print()
             console.print(table)
             console.print()
             console.print(char_table)
@@ -301,57 +441,208 @@ def info(address: str, timeout: float):
         except Exception as e:
             console.print(f"[red]Failed to connect: {e}[/red]")
 
-    asyncio.run(do_info())
+
+def show_about():
+    """Display vulnerability info and verification walkthrough."""
+    console.print()
+    console.print(Rule("[bold magenta]About CVE-2025-36911[/bold magenta]", style="magenta"))
+    console.print()
+
+    console.print(Panel(
+        """[bold]The Vulnerability[/bold]
+
+Google Fast Pair requires devices to [bold]only accept pairing requests 
+when in pairing mode[/bold]. Many devices fail this check:
+
+[green]EXPECTED:[/green] "Am I in pairing mode?" → NO → Reject request
+[red]ACTUAL:[/red]   Accepts request regardless of mode state
+
+[bold]Impact:[/bold] Attacker within ~10-14m can:
+  • Play audio through victim's headphones
+  • Access microphone for surveillance  
+  • Track location via Google Find Hub
+
+[bold]Affected devices:[/bold] Pixel Buds Pro 2, Sony WF/WH-1000XM series,
+JBL Tune/Live series, Anker Soundcore, and many more.
+
+[green]Patches are available[/green] - update your device firmware!""",
+        title="[bold]What is WhisperPair?[/bold]",
+        border_style="magenta",
+        padding=(1, 2),
+    ))
+
+    console.print()
+
+    console.print(Panel(
+        """[bold]Phase 1: Discovery[/bold] [dim](Passive)[/dim]
+   Scan for devices advertising Fast Pair Service (UUID: 0xFE2C)
+   Devices advertising while NOT in pairing mode are potential targets
+
+[bold]Phase 2: Connection[/bold] [dim](Standard BLE)[/dim]
+   Establish GATT connection - any Bluetooth adapter works
+
+[bold]Phase 3: Verification[/bold] [dim](Active - Requires Authorization)[/dim]
+   Write Key-based Pairing Request to: FE2C1234-8366-4814-8EB0-01DE32100BEA
+   
+   [bold red]THE BUG:[/bold red] Device should reject if not in pairing mode
+   
+   [bold cyan]KEY INSIGHT:[/bold cyan] The AES key is NOT required for detection!
+   Vulnerable devices respond to ANY request when they shouldn't.
+   Getting a response at all = VULNERABLE (response content doesn't matter)
+   
+   The real attack then completes with standard Bluetooth pairing.
+
+[bold]Phase 4: Result[/bold]
+   • Any response received → [red]VULNERABLE[/red]
+   • No response / timeout → [green]PATCHED or not reachable[/green]
+
+[yellow]⚠ This tool stops at verification. No pairing. No audio playback.[/yellow]""",
+        title="[bold]How Verification Works[/bold]",
+        border_style="blue",
+        padding=(1, 2),
+    ))
+
+    console.print()
+
+    console.print(Panel(
+        """[bold]Research:[/bold] KU Leuven DistriNet
+[bold]Published:[/bold] January 2026
+[bold]Website:[/bold] https://whisperpair.eu
+[bold]Severity:[/bold] Critical ($15,000 Google bounty)
+[bold]Project Maintainer:[/bold] SpectrixDev
+
+[dim]Responsibly disclosed to Google in August 2025 (150-day window)[/dim]""",
+        title="[bold]Credits[/bold]",
+        border_style="dim",
+        padding=(0, 2),
+    ))
+
+    console.print()
+    Prompt.ask("[dim]Press Enter to return to main menu[/dim]")
+
+
+def interactive_loop():
+    """Main interactive loop."""
+    while True:
+        clear_screen()
+        print_banner()
+
+        choice = show_main_menu()
+
+        if choice == "0":
+            console.print("\n[dim]Goodbye.[/dim]")
+            break
+
+        elif choice == "1":
+            config = show_scan_menu()
+            if not config.get("cancel"):
+                asyncio.run(run_scan(config))
+                console.print()
+                Prompt.ask("[dim]Press Enter to continue[/dim]")
+
+        elif choice == "2":
+            config = show_verify_menu()
+            if not config.get("cancel"):
+                asyncio.run(run_verify(config))
+                console.print()
+                Prompt.ask("[dim]Press Enter to continue[/dim]")
+
+        elif choice == "3":
+            config = show_info_menu()
+            if not config.get("cancel"):
+                asyncio.run(run_info(config))
+                console.print()
+                Prompt.ask("[dim]Press Enter to continue[/dim]")
+
+        elif choice == "4":
+            show_about()
+
+
+# =============================================================================
+# CLI Entry Points (Click-based for direct command access)
+# =============================================================================
+
+@click.group(invoke_without_command=True)
+@click.version_option(version="0.1.0")
+@click.pass_context
+def main(ctx):
+    """WhisperPair - Fast Pair Security Research Tool
+
+    Run without arguments for interactive mode, or use subcommands directly.
+    """
+    if ctx.invoked_subcommand is None:
+        interactive_loop()
 
 
 @main.command()
-def demo():
+@click.option("--timeout", "-t", default=10.0, help="Scan timeout in seconds")
+@click.option("--all", "-a", "scan_all", is_flag=True, help="Scan all BLE devices")
+@click.option("--vulnerable", "-v", is_flag=True, help="Only show potentially vulnerable devices")
+def scan(timeout: float, scan_all: bool, vulnerable: bool):
+    """Scan for Fast Pair devices"""
+    print_banner()
+    config = {
+        "timeout": timeout,
+        "vulnerable_only": vulnerable,
+        "scan_all": scan_all,
+    }
+    asyncio.run(run_scan(config))
+
+
+@main.command(name="verify")
+@click.argument("address")
+@click.option("--key", "-k", help="AES key (hex) or Account Key file")
+@click.option("--timeout", "-t", default=10.0, help="Connection timeout")
+@click.option("--authorized", is_flag=True, help="Confirm you own the device and accept responsibility")
+@click.option("--no-confirm", is_flag=True, help="Skip interactive confirmation")
+def verify(address: str, key: Optional[str], timeout: float, authorized: bool, no_confirm: bool):
+    """Verify Fast Pair vulnerability on a device"""
     print_banner()
 
-    console.print(Panel(
-        """
-[bold cyan]WhisperPair Verification Walkthrough[/bold cyan]
+    if not authorized:
+        console.print("[red]Refusing to run without explicit consent flag.[/red]")
+        console.print("Use --authorized to confirm you own the device and accept responsibility.")
+        sys.exit(2)
 
-This demo explains the verification flow without targeting devices.
+    if not no_confirm:
+        print_legal_warning()
+        response = console.input("Type 'I AM AUTHORIZED' to continue: ")
+        if response.strip() != "I AM AUTHORIZED":
+            console.print("[red]Authorization confirmation failed.[/red]")
+            sys.exit(2)
 
-[bold]1. Discovery Phase[/bold]
-   Scan for BLE devices advertising Fast Pair Service (0xFE2C)
-   Devices advertising while NOT in pairing mode are potential concerns
+    aes_key = None
+    if key:
+        try:
+            aes_key = bytes.fromhex(key.replace(":", "").replace(" ", ""))
+            if len(aes_key) != 16:
+                raise ValueError("Key must be 16 bytes")
+        except ValueError as e:
+            console.print(f"[red]Invalid key: {e}[/red]")
+            sys.exit(1)
 
-[bold]2. Connection Phase[/bold]
-   Connect to target's GATT server
-   No special hardware required - standard Bluetooth adapter works
+    config = {
+        "address": address.upper(),
+        "aes_key": aes_key,
+    }
+    asyncio.run(run_verify(config))
 
-[bold]3. Verification Phase (CVE-2025-36911)[/bold]
-   Write Key-based Pairing Request to characteristic:
-   UUID: FE2C1234-8366-4814-8EB0-01DE32100BEA
-   
-   [red]VULNERABILITY:[/red] Device should check if in pairing mode, but doesn't
-   Vulnerable device responds and initiates Bluetooth pairing
 
-[bold]4. Pairing Completion (Prevented)[/bold]
-   This tool stops here. In a real attack, the attacker would
-   complete Bluetooth Classic pairing and establish audio connection.
+@main.command()
+@click.argument("address")
+@click.option("--timeout", "-t", default=10.0, help="Connection timeout")
+def info(address: str, timeout: float):
+    """Get detailed information about a Fast Pair device"""
+    print_banner()
+    config = {"address": address.upper()}
+    asyncio.run(run_info(config))
 
-[bold yellow]Affected Devices Include:[/bold yellow]
-   • Google Pixel Buds Pro 2
-   • Sony WF-1000XM4, WH-1000XM5
-   • JBL Tune Buds, Live Pro 2
-   • Anker Soundcore Liberty 4
-   • Many more...
 
-[dim]Reference: https://whisperpair.eu[/dim]
-""",
-        title="Verification Flow",
-        border_style="red",
-    ))
-
-    console.print("\n[bold]Commands:[/bold]")
-    console.print("  [cyan]whisperpair scan[/cyan]          - Find Fast Pair devices")
-    console.print("  [cyan]whisperpair scan -v[/cyan]       - Find potentially vulnerable devices")
-    console.print("  [cyan]whisperpair info ADDR[/cyan]     - Get device information")
-    console.print("  [cyan]whisperpair verify ADDR[/cyan]   - Verify Fast Pair behavior")
-
+@main.command()
+def about():
+    """Learn about CVE-2025-36911 and how verification works"""
+    print_banner()
+    show_about()
 
 
 if __name__ == "__main__":

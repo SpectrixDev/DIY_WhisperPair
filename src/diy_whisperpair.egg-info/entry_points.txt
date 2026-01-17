@@ -1,0 +1,2 @@
+[console_scripts]
+whisperpair = whisperpair.cli:main

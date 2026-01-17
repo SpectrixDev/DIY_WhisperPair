@@ -11,6 +11,7 @@ pycryptodome>=3.20.0
 # CLI Interface
 click>=8.1.0
 rich>=13.7.0
+pyperclip>=1.8.0
 
 # Async utilities
 asyncio-throttle>=1.0.2

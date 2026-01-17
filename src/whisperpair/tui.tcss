@@ -1,0 +1,450 @@
+/* WhisperPair TUI - Security Research Tool Styling */
+/* Dark theme with red security accents */
+
+Screen {
+    background: $surface;
+}
+
+/* ============================================================================ */
+/* HEADER / FOOTER */
+/* ============================================================================ */
+
+Header {
+    background: #1a0a0a;
+    color: #ff3333;
+    text-style: bold;
+}
+
+Footer {
+    background: #1a0a0a;
+}
+
+FooterKey {
+    background: #330000;
+    color: #ff6666;
+}
+
+FooterKey:hover {
+    background: #550000;
+}
+
+/* ============================================================================ */
+/* LEGAL CONSENT SCREEN */
+/* ============================================================================ */
+
+#legal-screen {
+    align: center middle;
+    background: #0a0a0a;
+}
+
+#legal-container {
+    width: 80;
+    height: auto;
+    max-height: 90%;
+    background: #1a0a0a;
+    border: heavy #ff3333;
+    padding: 1 2;
+}
+
+#legal-title {
+    text-align: center;
+    text-style: bold;
+    color: #ff3333;
+    padding: 1;
+}
+
+#legal-warning {
+    color: #ff6666;
+    text-align: center;
+    padding: 1;
+    background: #330000;
+    margin: 1 0;
+}
+
+#legal-text {
+    color: #cccccc;
+    padding: 1;
+    height: auto;
+    max-height: 20;
+}
+
+#legal-input-container {
+    height: auto;
+    padding: 1;
+    align: center middle;
+}
+
+#legal-input {
+    width: 50;
+    margin: 1 0;
+}
+
+#legal-buttons {
+    height: auto;
+    align: center middle;
+    padding: 1;
+}
+
+#accept-btn {
+    background: #003300;
+    color: #33ff33;
+    margin: 0 1;
+}
+
+#accept-btn:hover {
+    background: #004400;
+}
+
+#decline-btn {
+    background: #330000;
+    color: #ff3333;
+    margin: 0 1;
+}
+
+#decline-btn:hover {
+    background: #550000;
+}
+
+/* ============================================================================ */
+/* MAIN DASHBOARD */
+/* ============================================================================ */
+
+#dashboard {
+    layout: grid;
+    grid-size: 2 2;
+    grid-gutter: 1;
+    padding: 1;
+}
+
+.dashboard-panel {
+    border: round #444444;
+    padding: 1;
+    height: 100%;
+}
+
+.dashboard-panel:focus-within {
+    border: round #ff3333;
+}
+
+#panel-scan {
+    row-span: 2;
+    background: #0d0d0d;
+}
+
+#panel-info {
+    background: #0d0d0d;
+}
+
+#panel-actions {
+    background: #0d0d0d;
+}
+
+.panel-title {
+    text-style: bold;
+    color: #ff6666;
+    padding-bottom: 1;
+}
+
+/* ============================================================================ */
+/* DEVICE TABLE */
+/* ============================================================================ */
+
+DataTable {
+    height: 100%;
+    background: #0a0a0a;
+}
+
+DataTable > .datatable--header {
+    background: #1a0a0a;
+    color: #ff6666;
+    text-style: bold;
+}
+
+DataTable > .datatable--cursor {
+    background: #330000;
+    color: #ffffff;
+}
+
+DataTable > .datatable--hover {
+    background: #1a0a0a;
+}
+
+DataTable:focus > .datatable--cursor {
+    background: #550000;
+}
+
+/* ============================================================================ */
+/* BUTTONS */
+/* ============================================================================ */
+
+Button {
+    margin: 0 1 1 0;
+    min-width: 16;
+}
+
+Button.primary {
+    background: #003366;
+    color: #66ccff;
+}
+
+Button.primary:hover {
+    background: #004488;
+}
+
+Button.warning {
+    background: #663300;
+    color: #ffcc66;
+}
+
+Button.warning:hover {
+    background: #884400;
+}
+
+Button.danger {
+    background: #660000;
+    color: #ff6666;
+}
+
+Button.danger:hover {
+    background: #880000;
+}
+
+Button.success {
+    background: #003300;
+    color: #66ff66;
+}
+
+Button.success:hover {
+    background: #004400;
+}
+
+Button:disabled {
+    background: #333333;
+    color: #666666;
+}
+
+/* ============================================================================ */
+/* STATUS / INFO BOXES */
+/* ============================================================================ */
+
+.status-box {
+    height: auto;
+    padding: 1;
+    margin: 1 0;
+    border: round #444444;
+}
+
+.status-vulnerable {
+    background: #330000;
+    border: round #ff3333;
+    color: #ff6666;
+}
+
+.status-patched {
+    background: #003300;
+    border: round #33ff33;
+    color: #66ff66;
+}
+
+.status-unknown {
+    background: #333300;
+    border: round #ffff33;
+    color: #ffff66;
+}
+
+.status-scanning {
+    background: #000033;
+    border: round #3333ff;
+    color: #6666ff;
+}
+
+/* ============================================================================ */
+/* PROGRESS / LOADING */
+/* ============================================================================ */
+
+LoadingIndicator {
+    background: transparent;
+    color: #ff3333;
+}
+
+ProgressBar {
+    padding: 1 0;
+}
+
+ProgressBar > .bar--bar {
+    color: #ff3333;
+}
+
+ProgressBar > .bar--complete {
+    color: #33ff33;
+}
+
+/* ============================================================================ */
+/* INPUT FIELDS */
+/* ============================================================================ */
+
+Input {
+    background: #1a1a1a;
+    border: tall #444444;
+    padding: 0 1;
+}
+
+Input:focus {
+    border: tall #ff3333;
+}
+
+Input.-valid {
+    border: tall #33ff33;
+}
+
+Input.-invalid {
+    border: tall #ff3333;
+}
+
+/* ============================================================================ */
+/* LABELS / STATIC TEXT */
+/* ============================================================================ */
+
+.label-heading {
+    text-style: bold;
+    color: #ff6666;
+    padding: 1 0;
+}
+
+.label-subheading {
+    color: #999999;
+    text-style: italic;
+}
+
+.label-value {
+    color: #ffffff;
+}
+
+.label-dim {
+    color: #666666;
+}
+
+/* ============================================================================ */
+/* EDUCATION SCREEN */
+/* ============================================================================ */
+
+#education-container {
+    padding: 1;
+    background: #0a0a0a;
+}
+
+.education-section {
+    margin: 1 0;
+    padding: 1;
+    border: round #333333;
+    background: #0d0d0d;
+}
+
+.education-title {
+    text-style: bold;
+    color: #ff6666;
+    padding-bottom: 1;
+}
+
+/* ============================================================================ */
+/* MODAL / CONFIRMATION DIALOGS */
+/* ============================================================================ */
+
+ModalScreen {
+    align: center middle;
+}
+
+#confirm-dialog {
+    width: 60;
+    height: auto;
+    background: #1a0a0a;
+    border: heavy #ff3333;
+    padding: 1 2;
+}
+
+#confirm-title {
+    text-style: bold;
+    color: #ff3333;
+    text-align: center;
+    padding: 1;
+}
+
+#confirm-message {
+    color: #cccccc;
+    padding: 1;
+}
+
+#confirm-buttons {
+    align: center middle;
+    height: auto;
+    padding: 1;
+}
+
+/* ============================================================================ */
+/* SCAN RESULTS SCREEN */
+/* ============================================================================ */
+
+#scan-container {
+    padding: 1;
+}
+
+#scan-status {
+    height: auto;
+    padding: 1;
+    margin-bottom: 1;
+    background: #0d0d0d;
+    border: round #333333;
+}
+
+#device-table {
+    height: 1fr;
+}
+
+#scan-actions {
+    height: auto;
+    padding: 1;
+    align: center middle;
+}
+
+/* ============================================================================ */
+/* VERIFICATION SCREEN */
+/* ============================================================================ */
+
+#verify-container {
+    padding: 1;
+    align: center middle;
+}
+
+#verify-panel {
+    width: 70;
+    height: auto;
+    background: #0d0d0d;
+    border: round #ff3333;
+    padding: 2;
+}
+
+#verify-title {
+    text-style: bold;
+    color: #ff3333;
+    text-align: center;
+    padding: 1;
+}
+
+#verify-target {
+    text-align: center;
+    color: #66ccff;
+    padding: 1;
+}
+
+#verify-result {
+    padding: 1;
+    margin: 1 0;
+    text-align: center;
+}
+
+#verify-actions {
+    align: center middle;
+    height: auto;
+    padding: 1;
+}
+

@@ -1,6 +1,38 @@
+Metadata-Version: 2.4
+Name: diy-whisperpair
+Version: 0.1.0
+Summary: Google Fast Pair Seeker implementation for security research (CVE-2025-36911)
+Author-email: Security Researcher <research@example.com>
+License: MIT
+Project-URL: Homepage, https://github.com/example/diy-whisperpair
+Project-URL: Documentation, https://github.com/example/diy-whisperpair#readme
+Keywords: bluetooth,ble,fast-pair,security,research
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Security
+Classifier: Topic :: Scientific/Engineering
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: bleak>=0.22.0
+Requires-Dist: cryptography>=42.0.0
+Requires-Dist: pycryptodome>=3.20.0
+Requires-Dist: click>=8.1.0
+Requires-Dist: rich>=13.7.0
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.23.0; extra == "dev"
+Requires-Dist: black; extra == "dev"
+Requires-Dist: ruff; extra == "dev"
+Dynamic: license-file
+
 # DIY-WhisperPair
-
-
 
 **CVE-2025-36911 Reference Implementation for Security Researchers**
 
@@ -9,24 +41,6 @@
 [![Status](https://img.shields.io/badge/Disclosure-Completed-green)](https://whisperpair.eu)
 
 > **LEGAL NOTICE**: This is a security research tool. **Read [LEGAL.md](LEGAL.md) before use.** Unauthorized access to computer systems is a criminal offence.
-
----
-
-<img src="image.png" width="400" alt="WhisperPair Demonstration">
-
-## What is WhisperPair?
-
-**Hijacking Bluetooth Accessories Using Google Fast Pair.**
-
-**WhisperPair (CVE-2025-36911)** is a critical vulnerability that allows attackers to forcefully pair with flagship audio accessories **without user consent**, often in under 10 seconds.
-
-**`DIY-WhisperPair`** is a research toolkit implementing these attacks to demonstrate three key risks:
-*   **Device Hijacking**: Seizing control of audio and microphone streams by bypassing pairing mode checks.
-*   **Location Tracking**: Maliciously registering devices to Google's Find Hub Network to stalk victims.
-*   **Cross-Ecosystem Impact**: Exploiting accessories regardless of the paired phone (iOS or Android).
-
-> [!NOTE]
-> **Research Only**: This toolkit contains **Proof-of-Concept** scanners and verifiers. It does **not** include tools for active eavesdropping, persistent location tracking, or malicious payload injection. Its purpose is solely to identify vulnerable devices.
 
 ---
 
@@ -54,7 +68,8 @@ This launches an interactive menu:
   1  Scan      Discover Fast Pair devices nearby
   2  Verify    Test device vulnerability (requires authorization)
   3  Info      Get detailed device information
-  4  About     Learn about CVE-2025-36911
+  4  Learn     Understand CVE-2025-36911
+  5  Demo      View verification walkthrough
   0  Exit      Quit the application
 
 Select option [1]:
@@ -107,7 +122,6 @@ from whisperpair import (
     KeyBasedPairingResponse,
     PairingRequestFlags,
     parse_bluetooth_address,
-    parse_kbp_response_multi_strategy,
     
     # Crypto
     FastPairCrypto,
@@ -129,34 +143,28 @@ def on_found(device: FastPairDevice):
 scanner = FastPairScanner(timeout=15, on_device_found=on_found)
 asyncio.run(scanner.scan())
 
-# Build raw protocol packets (flags 0x11 = INITIATE_BONDING | EXTENDED_RESPONSE)
+# Build raw protocol packets
 target_bytes = parse_bluetooth_address("AA:BB:CC:DD:EE:FF")
 request = KeyBasedPairingRequest.for_verification(provider_address=target_bytes)
 packet = request.build()  # 16-byte plaintext
+encrypted = aes_128_encrypt(your_key, packet)
 
-# Multiple verification strategies available:
-# - strategy_raw_kbp()      - flags 0x11, works on most vulnerable devices
-# - strategy_with_seeker()  - flags 0x02, includes seeker address
-# - strategy_retroactive()  - flags 0x0A, bypasses some checks
-# - strategy_extended()     - flags 0x10, for newer devices
-
-# Full custom flow (AES key optional - response detection alone indicates vulnerability)
+# Full custom flow
 async with FastPairClient("AA:BB:CC:DD:EE:FF") as client:
     model_id = await client.read_model_id()
-    result = await client.verify_pairing_behavior()  # No key needed for detection
-    if result.response_received:
-        print("VULNERABLE - device responded when it shouldn't")
+    result = await client.verify_pairing_behavior(aes_key=your_key)
 ```
 
 ### Example Scripts
 
-See [`examples.py`](examples.py) for copy-paste ready examples:
+See [`examples.py`](examples.py) for 8 copy-paste ready examples:
 
 ```bash
-python examples.py scan              # Basic scanning
-python examples.py vulnerable        # Find vulnerable devices
-python examples.py verify AA:BB:CC:DD:EE:FF
-python examples.py custom            # Scanner with callbacks
+python examples.py --example scan          # Basic scanning
+python examples.py --example vulnerable    # Find vulnerable devices
+python examples.py --example verify -t AA:BB:CC:DD:EE:FF
+python examples.py --example protocol      # Build raw packets
+python examples.py --example crypto        # ECDH & AES operations
 ```
 
 ---
@@ -182,7 +190,10 @@ whisperpair info AA:BB:CC:DD:EE:FF
 whisperpair verify AA:BB:CC:DD:EE:FF --authorized
 
 # Learn about the vulnerability
-whisperpair about
+whisperpair learn
+
+# View walkthrough
+whisperpair demo
 ```
 
 ---
@@ -219,23 +230,6 @@ Google Fast Pair requires devices to **only accept pairing requests when in pair
 ```
 EXPECTED: Device checks "Am I in pairing mode?" → NO → Reject
 ACTUAL:   Device accepts request regardless of mode state
-```
-
-### How Detection Works
-
-The vulnerability is detected by checking if a device **responds at all** to a Key-Based Pairing request when not in pairing mode:
-
-```
-┌─────────────────────────────────────────────────────┐
-│  Key-Based Pairing Request (16 bytes)               │
-├─────────────────────────────────────────────────────┤
-│  [0x00] [0x11] [MAC:6 bytes] [Salt:8 bytes]         │
-│    │      │                                         │
-│    │      └─ Flags: INITIATE_BONDING|EXTENDED_RESP  │
-│    └─ Message Type: Key-Based Pairing Request       │
-└─────────────────────────────────────────────────────┘
-
-Detection: Response received = VULNERABLE (no AES key needed!)
 ```
 
 ### Impact
@@ -334,7 +328,6 @@ MIT License - See [LICENSE](LICENSE)
 
 ## Acknowledgments
 
-- **SpectrixDev** - Project Maintainer
 - **KU Leuven DistriNet** - Original research
 - **Google Android Security Team** - Coordinated disclosure
 - **Seytonic** - [Excellent explainer video](https://www.youtube.com/watch?v=Ux07J-wS2VA)
