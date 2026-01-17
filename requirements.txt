@@ -1,0 +1,20 @@
+# DIY WhisperPair - Google Fast Pair Seeker Implementation
+# For security research and testing purposes only
+
+# BLE Communication
+bleak>=0.22.0
+
+# Cryptography (AES-128, ECDH, SHA-256)
+cryptography>=42.0.0
+pycryptodome>=3.20.0
+
+# CLI Interface
+click>=8.1.0
+rich>=13.7.0
+
+# Async utilities
+asyncio-throttle>=1.0.2
+
+# Development
+pytest>=8.0.0
+pytest-asyncio>=0.23.0

@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "diy-whisperpair"
+version = "0.1.0"
+description = "Google Fast Pair Seeker implementation for security research (CVE-2025-36911)"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "Security Researcher", email = "research@example.com"}
+]
+keywords = ["bluetooth", "ble", "fast-pair", "security", "research"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "bleak>=0.22.0",
+    "cryptography>=42.0.0",
+    "pycryptodome>=3.20.0",
+    "click>=8.1.0",
+    "rich>=13.7.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "black",
+    "ruff",
+]
+
+[project.scripts]
+whisperpair = "whisperpair.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/example/diy-whisperpair"
+Documentation = "https://github.com/example/diy-whisperpair#readme"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

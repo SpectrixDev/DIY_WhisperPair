@@ -1,0 +1,72 @@
+MIT License with Security Research Addendum
+
+Copyright (c) 2026
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+1. The above copyright notice and this permission notice shall be included in
+   all copies or substantial portions of the Software.
+
+2. SECURITY RESEARCH ADDENDUM: This Software is provided for security research,
+   education, authorized penetration testing, and device verification purposes
+   only. Users of this Software agree to:
+
+   a) Only use this Software on devices they own or have explicit written
+      authorization to test;
+   
+   b) Comply with all applicable local, national, and international laws,
+      including but not limited to:
+      - UK Computer Misuse Act 1990
+      - US Computer Fraud and Abuse Act
+      - EU Directive 2013/40/EU
+      - And equivalent legislation in their jurisdiction;
+   
+   c) Not use this Software for unauthorized access, surveillance, harassment,
+      or any illegal purpose;
+   
+   d) Accept full legal responsibility for their use of this Software.
+
+3. The authors and contributors of this Software:
+
+   a) Do not condone or encourage any illegal use of this Software;
+   
+   b) Have released this Software only after responsible disclosure was
+      completed and patches were made available;
+   
+   c) Provide this Software solely to enable security research, defensive
+      testing, and vulnerability verification.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+ACKNOWLEDGMENT OF CVE-2025-36911 (WhisperPair)
+
+This Software implements techniques described in the WhisperPair research
+(https://whisperpair.eu), which was responsibly disclosed to Google in August
+2025 under a 150-day coordinated disclosure window. Google classified this
+vulnerability as Critical severity and worked with ecosystem partners to
+release patches before public disclosure.
+
+This reference implementation is released after:
+1. The disclosure window has closed
+2. Patches have been made available by affected manufacturers
+3. The vulnerability has been publicly documented (CVE-2025-36911)
+4. Extensive media coverage has informed the public
+
+The purpose of this release is to enable:
+- Security researchers to understand and study the vulnerability
+- Device manufacturers to verify their patches
+- Penetration testers to assess client environments (with authorization)
+- Educators to teach about Bluetooth security
