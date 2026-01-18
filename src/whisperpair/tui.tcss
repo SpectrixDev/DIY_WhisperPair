@@ -346,39 +346,7 @@ Input.-invalid {
     padding-bottom: 1;
 }
 
-/* ============================================================================ */
-/* MODAL / CONFIRMATION DIALOGS */
-/* ============================================================================ */
 
-ModalScreen {
-    align: center middle;
-}
-
-#confirm-dialog {
-    width: 60;
-    height: auto;
-    background: #1a0a0a;
-    border: heavy #ff3333;
-    padding: 1 2;
-}
-
-#confirm-title {
-    text-style: bold;
-    color: #ff3333;
-    text-align: center;
-    padding: 1;
-}
-
-#confirm-message {
-    color: #cccccc;
-    padding: 1;
-}
-
-#confirm-buttons {
-    align: center middle;
-    height: auto;
-    padding: 1;
-}
 
 /* ============================================================================ */
 /* SCAN RESULTS SCREEN */

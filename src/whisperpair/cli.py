@@ -34,16 +34,10 @@ BANNER = """
 """
 
 LEGAL_WARNING = """
-[bold yellow]⚠  LEGAL WARNING[/bold yellow]
+[bold yellow]⚠ LEGAL WARNING: RESEARCH ONLY[/bold yellow]
 
-This tool performs [bold]active Bluetooth operations[/bold].
-Unauthorized access to computer systems is a [bold red]criminal offence[/bold red].
-
-[bold]You MUST have:[/bold]
-  • Written permission from the device owner, OR
-  • Own the device yourself
-
-[dim]UK: Computer Misuse Act 1990 | US: CFAA | EU: Directive 2013/40/EU[/dim]
+[bold]UNAUTHORIZED ACCESS IS ILLEGAL.[/bold]
+Ensure you have permission or ownership before testing.
 """
 
 
@@ -247,16 +241,6 @@ def show_verify_menu() -> dict:
     print_legal_warning()
 
     console.print()
-    authorized = Confirm.ask(
-        "[bold]Do you confirm you own or have written authorization to test the target device?[/bold]",
-        default=False
-    )
-
-    if not authorized:
-        console.print("[red]Authorization required. Returning to main menu.[/red]")
-        return {"cancel": True}
-
-    console.print()
     address = Prompt.ask("[bold]Enter target device address[/bold] [dim](e.g., AA:BB:CC:DD:EE:FF)[/dim]")
 
     if not address or len(address) < 17:
@@ -264,13 +248,6 @@ def show_verify_menu() -> dict:
         return {"cancel": True}
 
     console.print()
-    console.print("[yellow]Final confirmation required.[/yellow]")
-    confirm_text = Prompt.ask("Type [bold]'I AM AUTHORIZED'[/bold] to proceed")
-
-    if confirm_text.strip() != "I AM AUTHORIZED":
-        console.print("[red]Authorization confirmation failed.[/red]")
-        return {"cancel": True}
-
     use_key = Confirm.ask("[bold]Do you have an AES key?[/bold]", default=False)
     aes_key = None
     if use_key:
@@ -598,18 +575,6 @@ def scan(timeout: float, scan_all: bool, vulnerable: bool):
 def verify(address: str, key: Optional[str], timeout: float, authorized: bool, no_confirm: bool):
     """Verify Fast Pair vulnerability on a device"""
     print_banner()
-
-    if not authorized:
-        console.print("[red]Refusing to run without explicit consent flag.[/red]")
-        console.print("Use --authorized to confirm you own the device and accept responsibility.")
-        sys.exit(2)
-
-    if not no_confirm:
-        print_legal_warning()
-        response = console.input("Type 'I AM AUTHORIZED' to continue: ")
-        if response.strip() != "I AM AUTHORIZED":
-            console.print("[red]Authorization confirmation failed.[/red]")
-            sys.exit(2)
 
     aes_key = None
     if key:

@@ -12,7 +12,7 @@ from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Horizontal, Vertical, Center, ScrollableContainer
-from textual.screen import Screen, ModalScreen
+from textual.screen import Screen
 from textual.widgets import (
     Button,
     DataTable,
@@ -24,34 +24,6 @@ from textual.widgets import (
     TabbedContent,
     TabPane,
 )
-
-
-class ConfirmationModal(ModalScreen[bool]):
-    
-    def __init__(self, title: str, message: str) -> None:
-        super().__init__()
-        self.title_text = title
-        self.message_text = message
-    
-    def compose(self) -> ComposeResult:
-        yield Container(
-            Static(self.title_text, id="confirm-title"),
-            Static(self.message_text, id="confirm-message"),
-            Horizontal(
-                Button("Confirm", id="confirm-yes", variant="warning"),
-                Button("Cancel", id="confirm-no", variant="primary"),
-                id="confirm-buttons",
-            ),
-            id="confirm-dialog",
-        )
-    
-    @on(Button.Pressed, "#confirm-yes")
-    def confirm_yes(self) -> None:
-        self.dismiss(True)
-    
-    @on(Button.Pressed, "#confirm-no")
-    def confirm_no(self) -> None:
-        self.dismiss(False)
 
 
 class MainScreen(Screen):
@@ -232,14 +204,7 @@ class MainScreen(Screen):
         row_idx = table.get_row_index(self.selected_device)
         if row_idx < len(self.devices):
             device = self.devices[row_idx]
-            confirmed = await self.app.push_screen_wait(
-                ConfirmationModal(
-                    "Confirm Verification",
-                    f"Verify {device.name} ({device.address})?\n\nOnly proceed if you OWN this device.",
-                )
-            )
-            if confirmed:
-                await self.app.push_screen(VerificationScreen(device.address))
+            await self.app.push_screen(VerificationScreen(device.address))
     
     @on(Button.Pressed, "#btn-verify-addr")
     async def verify_address(self) -> None:
@@ -248,14 +213,7 @@ class MainScreen(Screen):
             self.query_one("#verify-result", Static).update("[bold red]Enter a valid Bluetooth address[/]")
             return
         
-        confirmed = await self.app.push_screen_wait(
-            ConfirmationModal(
-                "Confirm Verification",
-                f"Verify {address}?\n\nOnly proceed if you OWN this device.",
-            )
-        )
-        if confirmed:
-            await self.app.push_screen(VerificationScreen(address))
+        await self.app.push_screen(VerificationScreen(address))
     
     def action_scan(self) -> None:
         self.query_one("#btn-scan", Button).press()
@@ -313,11 +271,7 @@ class DeviceInfoScreen(Screen):
     
     @on(Button.Pressed, "#btn-verify-device")
     async def action_verify(self) -> None:
-        confirmed = await self.app.push_screen_wait(
-            ConfirmationModal("Confirm", f"Verify {self.device.address}?")
-        )
-        if confirmed:
-            await self.app.push_screen(VerificationScreen(self.device.address))
+        await self.app.push_screen(VerificationScreen(self.device.address))
 
 
 class VerificationScreen(Screen):
@@ -449,10 +403,8 @@ ABOUT_CONTENT = """
 
 [bold]Legal Notice[/]
 This tool is for AUTHORIZED USE ONLY.
-Using it on devices you don't own is illegal under:
-  - UK Computer Misuse Act 1990
-  - US CFAA
-  - Similar laws in other jurisdictions
+Unauthorized access to devices is illegal.
+Ensure you have permission.
 
 [bold]Original Research[/]
 KU Leuven (DistriNet)
@@ -483,19 +435,12 @@ def main():
     console = Console()
     
     console.print(Panel(
-        "[bold red]WhisperPair[/] - CVE-2025-36911 Verification Tool\n\n"
-        "[yellow]WARNING:[/] This tool performs active Bluetooth operations.\n"
-        "Only use on devices you OWN or are AUTHORIZED to test.\n"
-        "Unauthorized use is illegal under UK Computer Misuse Act 1990.",
+        "[bold red]WhisperPair[/] - CVE-2025-36911\n\n"
+        "[bold]AUTHORIZED USE ONLY.[/bold] Active Bluetooth operations.\n"
+        "Ensure you have permission/ownership before testing.",
         title="Legal Notice",
         border_style="red",
     ))
-    
-    response = console.input("\n[bold]Do you accept responsibility? (y/n):[/] ")
-    
-    if response.lower().strip() not in ("y", "yes"):
-        console.print("[red]Exiting.[/]")
-        sys.exit(0)
     
     app = WhisperPairApp()
     app.run()
