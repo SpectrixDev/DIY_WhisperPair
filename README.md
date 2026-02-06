@@ -36,8 +36,8 @@
 
 ```bash
 # Install
-git clone https://github.com/SpectrixDev/DIY-WhisperPair.git
-cd DIY-WhisperPair
+git clone https://github.com/SpectrixDev/DIY_WhisperPair.git
+cd DIY_WhisperPair
 pip install -e .
 
 # Run interactive CLI
@@ -287,8 +287,8 @@ DIY_WhisperPair/
 ## Installation
 
 ```bash
-git clone https://github.com/SpectrixDev/DIY-WhisperPair.git
-cd DIY-WhisperPair
+git clone https://github.com/SpectrixDev/DIY_WhisperPair.git
+cd DIY_WhisperPair
 python3 -m venv venv
 source venv/bin/activate  # Linux/macOS
 pip install -e .
