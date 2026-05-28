@@ -1,12 +1,15 @@
 # DIY-WhisperPair
 
 
-
 **CVE-2025-36911 Reference Implementation & Vulnerability Verification Toolkit**
+
 
 [![Research](https://img.shields.io/badge/Type-Security%20Research-blue)](https://whisperpair.eu)
 [![CVE](https://img.shields.io/badge/CVE-2025--36911-red)](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2025-36911)
 [![Status](https://img.shields.io/badge/Disclosure-Completed-green)](https://whisperpair.eu)
+
+> [OFFICIAL IMPLEMENTATION NOW LIVE](https://github.com/KULeuven-COSIC/WhisperPair) , thanks to the team at KU Leuven ([Thanks for the shoutout](https://github.com/SpectrixDev/DIY_WhisperPair/issues/3))
+
 
 > **LEGAL NOTICE**: This is a security research tool. **Read [LEGAL.md](LEGAL.md) before use.** Unauthorized access to computer systems is a criminal offence.
 
